@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VitalPredict — AI Healthcare Risk Prediction System</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                        },
+                        accent: {
+                            blue: '#2563eb',
+                            red: '#ef4444',
+                            amber: '#f59e0b',
+                            emerald: '#10b981'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(229, 231, 235, 0.8);
+        }
+        .dark .glass-card {
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(55, 65, 81, 0.5);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        .dark ::-webkit-scrollbar-thumb { background: #334155; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-200">
+
+    <div id="app" class="flex flex-col min-h-screen">
+
+        <!-- Header / Navigation Bar -->
+        <header class="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    
+                    <!-- Logo -->
+                    <div class="flex items-center space-x-3 cursor-pointer" onclick="navigateTo('dashboard')">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-teal-400 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+                            <i class="fa-solid font-bold fa-heart-pulse text-xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-brand-700 to-teal-500 dark:from-brand-500 dark:to-teal-300 bg-clip-text text-transparent">VitalPredict</span>
+                            <span class="hidden sm:inline-block ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-brand-100 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300">v2.4 ML</span>
+                        </div>
+                    </div>
+
+                    <!-- Main Navigation Tabs (Hidden when logged out) -->
+                    <nav id="mainNav" class="hidden md:flex space-x-1 lg:space-x-2">
+                        <button onclick="navigateTo('dashboard')" data-tab="dashboard" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+                            <i class="fa-solid fa-chart-line text-brand-500"></i>
+                            <span>Dashboard</span>
+                        </button>
+                        <button onclick="navigateTo('predict')" data-tab="predict" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+                            <i class="fa-solid fa-notes-medical text-brand-500"></i>
+                            <span>Patient Entry</span>
+                        </button>
+                        <button onclick="navigateTo('pipeline')" data-tab="pipeline" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+                            <i class="fa-solid fa-gears text-brand-500"></i>
+                            <span>ML Pipeline</span>
+                        </button>
+                        <button onclick="navigateTo('evaluation')" data-tab="evaluation" class="nav-btn px-3 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+                            <i class="fa-solid fa-square-poll-vertical text-brand-500"></i>
+                            <span>Model Metrics</span>
+                        </button>
+                    </nav>
+
+                    <!-- User Actions / Role Toggle / Dark Mode -->
+                    <div class="flex items-center space-x-3">
+                        <button id="themeToggleBtn" onclick="toggleTheme()" class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                            <i id="themeIcon" class="fa-solid fa-moon"></i>
+                        </button>
+
+                        <!-- Profile Info / Logout Area -->
+                        <div id="userProfileArea" class="hidden flex items-center space-x-3 pl-3 border-l border-slate-200 dark:border-slate-800">
+                            <div class="text-right hidden sm:block">
+                                <p id="navUserName" class="text-xs font-bold text-slate-800 dark:text-slate-200"></p>
+                                <span id="navRoleBadge" class="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-bold bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">Clinician Admin</span>
+                            </div>
+                            <button onclick="logoutUser()" class="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition" title="Logout">
+                                <i class="fa-solid fa-right-from-bracket"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile Navigation -->
+            <div id="mobileNav" class="hidden md:hidden border-t border-slate-200 dark:border-slate-800 px-4 py-2 flex justify-around bg-white dark:bg-slate-900">
+                <button onclick="navigateTo('dashboard')" data-tab="dashboard" class="mobile-nav-btn p-2 text-slate-600 dark:text-slate-300"><i class="fa-solid fa-chart-line"></i></button>
+                <button onclick="navigateTo('predict')" data-tab="predict" class="mobile-nav-btn p-2 text-slate-600 dark:text-slate-300"><i class="fa-solid fa-notes-medical"></i></button>
+                <button onclick="navigateTo('pipeline')" data-tab="pipeline" class="mobile-nav-btn p-2 text-slate-600 dark:text-slate-300"><i class="fa-solid fa-gears"></i></button>
+                <button onclick="navigateTo('evaluation')" data-tab="evaluation" class="mobile-nav-btn p-2 text-slate-600 dark:text-slate-300"><i class="fa-solid fa-square-poll-vertical"></i></button>
+            </div>
+        </header>
+
+        <!-- Notification Banner Container -->
+        <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+        <!-- AUTHENTICATION (Login / Sign Up) -->
+        <main id="authView" class="flex-1 flex items-center justify-center p-4">
+            <div class="w-full max-w-md">
+                <div class="glass-card rounded-2xl p-8 shadow-2xl border border-slate-200 dark:border-slate-800 transition-all">
+                    
+                    <!-- Auth Header -->
+                    <div class="text-center mb-8">
+                        <div class="inline-flex p-3 rounded-2xl bg-brand-50 dark:bg-brand-950/50 text-brand-600 dark:text-brand-400 mb-3">
+                            <i class="fa-solid fa-shield-halved text-3xl"></i>
+                        </div>
+                        <h2 class="text-2xl font-extrabold tracking-tight">VitalPredict</h2>
+                        <p id="authSubtitle" class="text-sm text-slate-500 dark:text-slate-400 mt-1">Sign in to access AI risk analysis and patient logs</p>
+                    </div>
+
+                    <!-- Auth Mode Switcher -->
+                    <div class="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 mb-6">
+                        <button id="authTabLogin" onclick="switchAuthTab('login')" class="flex-1 py-2 text-xs font-bold rounded-lg transition bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white">
+                            Login
+                        </button>
+                        <button id="authTabSignup" onclick="switchAuthTab('signup')" class="flex-1 py-2 text-xs font-bold rounded-lg transition text-slate-500 dark:text-slate-400 hover:text-slate-800">
+                            Register
+                        </button>
+                    </div>
+
+                    <!-- Form -->
+                    <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+                        <div id="signupNameField" class="hidden">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Full Name</label>
+                            <input type="text" id="authName" placeholder="Dr. John Doe / Alex Smith" class="w-full pl-3 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Email</label>
+                            <input type="email" id="authEmail" required placeholder="user@hospital.org" class="w-full pl-3 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Password</label>
+                            <input type="password" id="authPassword" required minlength="8" placeholder="At least 8 characters" class="w-full pl-3 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                        </div>
+                        <div id="signupRoleField" class="hidden">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Account Role</label>
+                            <select id="authRole" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                                <option value="patient">Patient Self-Monitor</option>
+                                <option value="doctor">Clinician / Doctor (sees all records)</option>
+                            </select>
+                        </div>
+                        <button type="submit" id="authSubmitBtn" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-lg shadow-brand-500/30 transition">Sign In to Portal</button>
+                    </form>
+
+                    <!-- OTP verification step -->
+                    <form id="otpForm" onsubmit="handleOtpSubmit(event)" class="space-y-4 hidden">
+                        <div class="text-center text-sm text-slate-500 dark:text-slate-400">
+                            We sent a 6-digit code to <b id="otpEmailText" class="text-slate-800 dark:text-slate-100"></b>. It expires in 10 minutes.
+                        </div>
+                        <div id="devOtpBox" class="hidden p-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-300 text-xs text-amber-800 dark:text-amber-200 text-center">
+                            Dev mode (SMTP not configured). Your code: <b id="devOtpText" class="font-mono text-base"></b>
+                        </div>
+                        <input type="text" id="otpInput" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required placeholder="000000" autocomplete="one-time-code" class="w-full text-center tracking-[0.6em] text-2xl font-mono py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-brand-500 outline-none">
+                        <button type="submit" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-lg shadow-brand-500/30 transition">Verify &amp; Continue</button>
+                        <div class="flex justify-between text-xs">
+                            <button type="button" onclick="resendOtp()" class="text-brand-600 dark:text-brand-400 font-bold">Resend code</button>
+                            <button type="button" onclick="cancelOtp()" class="text-slate-400 hover:text-slate-600">Back</button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </main>
+
+        <div id="mainAppViews" class="hidden flex-1 flex flex-col">
+            
+            <!-- HEALTH MONITORING DASHBOARD  -->
+            <section id="dashboardView" class="tab-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6">
+                
+                <!-- Welcome Stats Header -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-card p-6 rounded-2xl shadow-sm">
+                    <div>
+                        <h1 class="text-2xl font-bold tracking-tight">Patient Health & Risk Dashboard</h1>
+                        <p class="text-sm text-slate-500 dark:text-slate-400">Real-time health trends and historical prediction summaries.</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <button onclick="navigateTo('predict')" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm shadow-md transition flex items-center space-x-2">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>New Risk Assessment</span>
+                        </button>
+                        <button onclick="exportReport()" class="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-sm transition flex items-center space-x-2">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Export Records (CSV)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Metric Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="glass-card p-5 rounded-2xl border-l-4 border-l-brand-500 shadow-sm">
+                        <div class="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                            <span class="text-xs font-bold uppercase tracking-wider">Total Evaluated Records</span>
+                            <i class="fa-solid fa-database text-brand-500"></i>
+                        </div>
+                        <div id="kpiTotalRecords" class="text-2xl font-extrabold mt-2">18</div>
+                        <span class="text-xs text-emerald-500 font-semibold flex items-center mt-1">
+                            <i class="fa-solid fa-arrow-up mr-1"></i> +4 this month
+                        </span>
+                    </div>
+
+                    <div class="glass-card p-5 rounded-2xl border-l-4 border-l-red-500 shadow-sm">
+                        <div class="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                            <span class="text-xs font-bold uppercase tracking-wider">High Risk Alerts</span>
+                            <i class="fa-solid fa-triangle-exclamation text-red-500"></i>
+                        </div>
+                        <div id="kpiHighRisk" class="text-2xl font-extrabold text-red-600 dark:text-red-400 mt-2">3</div>
+                        <span class="text-xs text-slate-500 mt-1">Requires immediate clinical triage</span>
+                    </div>
+
+                    <div class="glass-card p-5 rounded-2xl border-l-4 border-l-amber-500 shadow-sm">
+                        <div class="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                            <span class="text-xs font-bold uppercase tracking-wider">Avg. Blood Glucose</span>
+                            <i class="fa-solid fa-droplet text-amber-500"></i>
+                        </div>
+                        <div id="kpiAvgGlucose" class="text-2xl font-extrabold mt-2">128 mg/dL</div>
+                        <span class="text-xs text-amber-500 font-semibold mt-1">Pre-diabetic threshold mean</span>
+                    </div>
+
+                    <div class="glass-card p-5 rounded-2xl border-l-4 border-l-blue-500 shadow-sm">
+                        <div class="flex items-center justify-between text-slate-500 dark:text-slate-400">
+                            <span class="text-xs font-bold uppercase tracking-wider">Model Accuracy Score</span>
+                            <i class="fa-solid fa-microchip text-blue-500"></i>
+                        </div>
+                        <div class="text-2xl font-extrabold text-blue-600 dark:text-blue-400 mt-2">91.4%</div>
+                        <span class="text-xs text-slate-500 mt-1">Random Forest Baseline v1.2</span>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Historical Trend Chart -->
+                    <div class="lg:col-span-2 glass-card p-6 rounded-2xl shadow-sm space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-base font-bold flex items-center space-x-2">
+                                <i class="fa-solid fa-chart-line text-brand-500"></i>
+                                <span>Glucose & Predicted Risk Trend</span>
+                            </h3>
+                            <span class="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-md font-semibold">Last 10 Logs</span>
+                        </div>
+                        <div class="h-64 relative">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Risk Distribution Pie Chart -->
+                    <div class="glass-card p-6 rounded-2xl shadow-sm space-y-4">
+                        <h3 class="text-base font-bold flex items-center space-x-2">
+                            <i class="fa-solid fa-chart-pie text-brand-500"></i>
+                            <span>Risk Category Breakdown</span>
+                        </h3>
+                        <div class="h-64 relative flex items-center justify-center">
+                            <canvas id="riskDistChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Log Table -->
+                <div class="glass-card rounded-2xl shadow-sm overflow-hidden">
+                    <div class="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                        <h3 class="text-base font-bold flex items-center space-x-2">
+                            <i class="fa-solid fa-clock-rotate-left text-brand-500"></i>
+                            <span>Patient Assessment Logs</span>
+                        </h3>
+                        <input type="text" id="logSearchInput" oninput="filterLogs()" placeholder="Search logs..." class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-1 focus:ring-brand-500 outline-none w-48">
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-[11px] font-extrabold uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                                    <th class="py-3 px-4">Date / ID</th>
+                                    <th class="py-3 px-4">Patient Profile</th>
+                                    <th class="py-3 px-4">Age / BMI</th>
+                                    <th class="py-3 px-4">Glucose (mg/dL)</th>
+                                    <th class="py-3 px-4">Blood Pressure</th>
+                                    <th class="py-3 px-4">Predicted Risk</th>
+                                    <th class="py-3 px-4 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody" class="divide-y divide-slate-200 dark:divide-slate-800 text-sm">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- PATIENT DATA ENTRY & PREDICTION -->
+            <section id="predictView" class="tab-content hidden max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6">
+                
+                <div class="glass-card p-6 rounded-2xl shadow-sm">
+                    <h1 class="text-2xl font-bold">Patient Data Entry & Real-Time Assessment</h1>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Enter clinical readings. Leave optional fields blank and the model imputes them with the training median. Inference runs on the server.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Input Form -->
+                    <form id="predictionForm" onsubmit="handlePredictionSubmit(event)" class="lg:col-span-7 glass-card p-6 rounded-2xl shadow-sm space-y-4">
+                        <h3 class="text-lg font-bold border-b border-slate-200 dark:border-slate-800 pb-2 text-brand-600 dark:text-brand-400">
+                            Patient Health & Lifestyle Indicators
+                        </h3>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Age (Years)</label>
+                                <input type="number" id="inputAge" required min="1" max="110" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                                <span class="text-[10px] text-slate-400">Range: 1 - 110</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">BMI (kg/m²)</label>
+                                <input type="number" step="0.1" id="inputBMI" min="10" max="60" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                                <span class="text-[10px] text-slate-400">Range: 10 - 60</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Fasting Blood Glucose (mg/dL)</label>
+                                <input type="number" id="inputGlucose" required min="40" max="400" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                                <span class="text-[10px] text-slate-400">Range: 40 - 400</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Systolic Blood Pressure (mmHg)</label>
+                                <input type="number" id="inputBP" min="60" max="240" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                                <span class="text-[10px] text-slate-400">Range: 60 - 240</span>
+                            </div>
+                        </div>
+
+                        <!-- Lifestyle Factors -->
+                        <div class="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-3">
+                            <span class="block text-xs font-bold uppercase tracking-wider text-slate-400">Lifestyle & Hereditary Factors</span>
+                            
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium mb-1">Physical Activity</label>
+                                    <select id="inputActivity" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                                        <option value="0">Sedentary (&lt; 1hr/wk)</option>
+                                        <option value="1" selected>Moderate (2-4 hrs/wk)</option>
+                                        <option value="2">Active (5+ hrs/wk)</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-medium mb-1">Family Diabetes History</label>
+                                    <select id="inputFamilyHistory" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                                        <option value="0">No First-degree Relative</option>
+                                        <option value="1" selected>Yes (Parent or Sibling)</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-medium mb-1">Food Intake (kcal/day)</label>
+                                    <input type="number" id="inputFood" min="500" max="6000" placeholder="e.g. 2300" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium mb-1">Stress Level (1-10)</label>
+                                    <input type="number" id="inputStress" min="1" max="10" placeholder="1 = calm, 10 = severe" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-brand-500 outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-lg shadow-brand-500/20 transition flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-microchip"></i>
+                            <span>Execute Prediction Engine</span>
+                        </button>
+                    </form>
+
+                    <!-- Real-Time Result Panel Output -->
+                    <div class="lg:col-span-5 glass-card p-6 rounded-2xl shadow-sm flex flex-col justify-between space-y-6">
+                        <div>
+                            <h3 class="text-lg font-bold border-b border-slate-200 dark:border-slate-800 pb-2 text-brand-600 dark:text-brand-400">
+                                Prediction Output Card
+                            </h3>
+
+                            <div id="resultPlaceholder" class="py-12 text-center text-slate-400">
+                                <i class="fa-solid fa-stethoscope text-4xl mb-3 opacity-50"></i>
+                                <p class="text-sm">Submit patient details to compute diabetes risk category and probability.</p>
+                            </div>
+
+                            <div id="resultContent" class="hidden space-y-4 pt-3">
+                                
+                                <!-- Risk Level Badge -->
+                                <div id="riskBadgeBox" class="p-4 rounded-2xl border text-center transition-all">
+                                    <span class="text-xs font-bold uppercase tracking-widest block opacity-75">Predicted Risk Category</span>
+                                    <h2 id="riskTitle" class="text-2xl font-black mt-1">High Risk</h2>
+                                    <p id="riskProbabilityText" class="text-sm font-semibold mt-1">Probability Score: 78.5%</p>
+                                </div>
+
+                                <!-- Probability Bar -->
+                                <div class="space-y-1">
+                                    <div class="flex justify-between text-xs font-bold">
+                                        <span>Low (0%)</span>
+                                        <span>Moderate (40%)</span>
+                                        <span>High (70%+)</span>
+                                    </div>
+                                    <div class="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                        <div id="probabilityMeter" class="h-full transition-all duration-700 bg-red-500" style="width: 78.5%;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Contributing Factors Explainer -->
+                                <div class="p-3 bg-slate-100 dark:bg-slate-800/60 rounded-xl space-y-2">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Key Contributing Drivers</span>
+                                    <ul id="contributingList" class="text-xs space-y-1 text-slate-700 dark:text-slate-300">
+                                        <!-- Dynamically generated -->
+                                    </ul>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Quick Save Log Action -->
+                        <div id="saveResultBox" class="hidden">
+                            <button onclick="saveCurrentToLog()" class="w-full py-2.5 rounded-xl border border-brand-500 text-brand-600 dark:text-brand-400 font-bold text-xs hover:bg-brand-50 dark:hover:bg-brand-950/40 transition">
+                                <i class="fa-solid fa-bookmark mr-1"></i> Save Assessment to History Log
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </section>
+
+            <!--  PREPROCESSING & FEATURE SELECTION -->
+            <section id="pipelineView" class="tab-content hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6">
+                
+                <div class="glass-card p-6 rounded-2xl shadow-sm">
+                    <h1 class="text-2xl font-bold">ML Data Preprocessing & Feature Engineering</h1>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        Live view of the trained pipeline: median imputation, standard scaling and RFE feature selection.
+                    </p>
+                </div>
+
+                <!-- Pipeline Steps Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    
+                    <div class="glass-card p-5 rounded-2xl space-y-3">
+                        <div class="w-8 h-8 rounded-lg bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-300 flex items-center justify-center font-bold">1</div>
+                        <h3 class="font-bold">Missing Value Imputation</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            Missing readings (and impossible zeros) are replaced with the training-set median of each column.
+                        </p>
+                        <div id="pipeImpute" class="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-mono">Loading...</div>
+                    </div>
+
+                    <div class="glass-card p-5 rounded-2xl space-y-3">
+                        <div class="w-8 h-8 rounded-lg bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-300 flex items-center justify-center font-bold">2</div>
+                        <h3 class="font-bold">Standard Normalization</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            Features are scaled using Z-score normalization ($z = \frac{x - \mu}{\sigma}$) to prevent high numeric ranges from dominating.
+                        </p>
+                        <div id="pipeScale" class="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-mono">Loading...</div>
+                    </div>
+
+                    <div class="glass-card p-5 rounded-2xl space-y-3">
+                        <div class="w-8 h-8 rounded-lg bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-300 flex items-center justify-center font-bold">3</div>
+                        <h3 class="font-bold">Feature Selection (RFE)</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            Recursive Feature Elimination (RFE) repeatedly drops the weakest feature and keeps the most relevant ones for prediction.
+                        </p>
+                        <div id="pipeRFE" class="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-mono">Loading...</div>
+                    </div>
+
+                </div>
+
+                <!-- Interactive Feature Importance Chart -->
+                <div class="glass-card p-6 rounded-2xl shadow-sm space-y-4">
+                    <h3 class="text-base font-bold flex items-center space-x-2">
+                        <i class="fa-solid fa-chart-bar text-brand-500"></i>
+                        <span>Random Forest Importance of RFE-Selected Features</span>
+                    </h3>
+                    <div class="h-64 relative">
+                        <canvas id="featureImportanceChart"></canvas>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- MODEL EVALUATION METRICS -->
+            <section id="evaluationView" class="tab-content hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6">
+                
+                <div class="glass-card p-6 rounded-2xl shadow-sm">
+                    <h1 class="text-2xl font-bold">Module 5: Model Evaluation (Random Forest vs Logistic Regression)</h1>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        <span id="evalIntro">Loading...</span>
+                    </p>
+                </div>
+
+                <!-- Decision Threshold Slider Control -->
+                <div class="glass-card p-5 rounded-2xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div class="space-y-1">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Classification Threshold Tuning</span>
+                        <h3 class="font-bold text-sm">Decision Cutoff: <span id="thresholdValText" class="text-brand-600 dark:text-brand-400">0.50</span></h3>
+                    </div>
+                    <div class="flex-1 max-w-md w-full">
+                        <input type="range" id="thresholdSlider" min="0.2" max="0.8" step="0.05" value="0.50" oninput="updateMetricsForThreshold(this.value)" class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand-500">
+                    </div>
+                </div>
+
+                <!-- Metrics Grid & Confusion Matrix -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    <!-- Metrics Summary -->
+                    <div class="lg:col-span-6 grid grid-cols-2 gap-4">
+                        <div class="glass-card p-5 rounded-2xl text-center">
+                            <span class="text-xs font-bold text-slate-400 uppercase">Accuracy</span>
+                            <div id="evalAccuracy" class="text-3xl font-extrabold text-brand-600 dark:text-brand-400 mt-2">91.4%</div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl text-center">
+                            <span class="text-xs font-bold text-slate-400 uppercase">Precision</span>
+                            <div id="evalPrecision" class="text-3xl font-extrabold text-blue-600 dark:text-blue-400 mt-2">88.5%</div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl text-center">
+                            <span class="text-xs font-bold text-slate-400 uppercase">Recall (Sensitivity)</span>
+                            <div id="evalRecall" class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2">89.2%</div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl text-center">
+                            <span class="text-xs font-bold text-slate-400 uppercase">F1-Score</span>
+                            <div id="evalF1" class="text-3xl font-extrabold text-purple-600 dark:text-purple-400 mt-2">88.8%</div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Confusion Matrix -->
+                    <div class="lg:col-span-6 glass-card p-6 rounded-2xl shadow-sm space-y-4">
+                        <h3 class="text-base font-bold flex items-center justify-between">
+                            <span>Confusion Matrix Plot</span>
+                            <span class="text-xs text-slate-400">Total Samples = <span id="cmTotal">-</span></span>
+                        </h3>
+
+                        <div class="grid grid-cols-2 gap-3 max-w-sm mx-auto text-center pt-2">
+                            <!-- True Negative -->
+                            <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
+                                <span class="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400 block">True Negative (TN)</span>
+                                <div id="cmTN" class="text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1">118</div>
+                                <span class="text-[10px] text-slate-400">Correct Healthy</span>
+                            </div>
+
+                            <!-- False Positive -->
+                            <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800">
+                                <span class="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400 block">False Positive (FP)</span>
+                                <div id="cmFP" class="text-2xl font-black text-amber-700 dark:text-amber-300 mt-1">9</div>
+                                <span class="text-[10px] text-slate-400">False Alarm</span>
+                            </div>
+
+                            <!-- False Negative -->
+                            <div class="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800">
+                                <span class="text-[10px] font-bold uppercase text-red-600 dark:text-red-400 block">False Negative (FN)</span>
+                                <div id="cmFN" class="text-2xl font-black text-red-700 dark:text-red-300 mt-1">8</div>
+                                <span class="text-[10px] text-slate-400">Missed Risk</span>
+                            </div>
+
+                            <!-- True Positive -->
+                            <div class="p-4 rounded-xl bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800">
+                                <span class="text-[10px] font-bold uppercase text-brand-600 dark:text-brand-400 block">True Positive (TP)</span>
+                                <div id="cmTP" class="text-2xl font-black text-brand-700 dark:text-brand-300 mt-1">65</div>
+                                <span class="text-[10px] text-slate-400">Correct High Risk</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            
+                <div class="glass-card p-6 rounded-2xl shadow-sm space-y-3">
+                    <h3 class="text-base font-bold">Model Comparison (held-out test set, threshold 0.50)</h3>
+                    <div class="overflow-x-auto"><table class="w-full text-sm text-left"><thead class="text-xs uppercase text-slate-400"><tr><th class="py-2 pr-4">Model</th><th class="pr-4">Accuracy</th><th class="pr-4">Precision</th><th class="pr-4">Recall</th><th class="pr-4">F1</th><th>ROC-AUC</th></tr></thead><tbody id="modelCompareBody" class="divide-y divide-slate-200 dark:divide-slate-800"></tbody></table></div>
+                    <p class="text-[11px] text-slate-400">Random Forest is the primary model; Logistic Regression is the baseline. The slider above applies to the Random Forest.</p>
+                </div>
+            </section>
+
+        </div>
+
+    </div>
+
+    <script>
+        const state = { currentUser: null, activeTab: 'dashboard', logs: [], lastInputs: null, lastPrediction: null, charts: {}, model: null, pendingEmail: null };
+
+        async function api(path, method = 'GET', body) {
+            const res = await fetch('/api' + path, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+            let data = {}; try { data = await res.json(); } catch (e) {}
+            data._status = res.status; return data;
+        }
+        const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+        window.addEventListener('DOMContentLoaded', checkSession);
+
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            document.getElementById('themeIcon').className = isDark ? 'fa-solid fa-sun text-amber-400' : 'fa-solid fa-moon';
+        }
+
+        // Navigation Controller
+
+        function navigateTo(tabId) {
+            if (!state.currentUser) return;
+
+            state.activeTab = tabId;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            
+            const target = document.getElementById(`${tabId}View`);
+            if (target) target.classList.remove('hidden');
+
+            // Update Nav Button Highlight
+            document.querySelectorAll('.nav-btn, .mobile-nav-btn').forEach(btn => {
+                const isActive = btn.dataset.tab === tabId;
+                if (isActive) {
+                    btn.classList.add('bg-brand-50', 'dark:bg-brand-950/50', 'text-brand-600', 'dark:text-brand-400', 'font-bold');
+                } else {
+                    btn.classList.remove('bg-brand-50', 'dark:bg-brand-950/50', 'text-brand-600', 'dark:text-brand-400', 'font-bold');
+                }
+            });
+
+            // Re-render charts when switching views
+            if (tabId === 'dashboard') renderDashboardCharts();
+            if (tabId === 'pipeline') renderFeatureChart();
+        }
+
+
+        function filterLogs() {
+            const query = document.getElementById('logSearchInput').value.toLowerCase();
+            const rows = document.querySelectorAll('#historyTableBody tr');
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(query) ? '' : 'none';
+            });
+        }
+
+
+        function renderDashboardCharts() {
+            // Trend Line Chart
+            const ctxTrend = document.getElementById('trendChart')?.getContext('2d');
+            if (!ctxTrend) return;
+
+            if (state.charts.trend) state.charts.trend.destroy();
+
+            const recentLogs = [...state.logs].reverse().slice(-8);
+
+            state.charts.trend = new Chart(ctxTrend, {
+                type: 'line',
+                data: {
+                    labels: recentLogs.map(l => l.id),
+                    datasets: [
+                        {
+                            label: 'Fasting Glucose (mg/dL)',
+                            data: recentLogs.map(l => l.glucose),
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Risk Probability (%)',
+                            data: recentLogs.map(l => l.prob),
+                            borderColor: '#ef4444',
+                            borderDash: [5, 5],
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            // Risk Breakdown Pie
+            const ctxPie = document.getElementById('riskDistChart')?.getContext('2d');
+            if (!ctxPie) return;
+
+            if (state.charts.pie) state.charts.pie.destroy();
+
+            const lowCount = state.logs.filter(l => l.risk === 'Low Risk').length;
+            const modCount = state.logs.filter(l => l.risk === 'Moderate Risk').length;
+            const highCount = state.logs.filter(l => l.risk === 'High Risk').length;
+
+            state.charts.pie = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Low Risk', 'Moderate Risk', 'High Risk'],
+                    datasets: [{
+                        data: [lowCount, modCount, highCount],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let color = 'bg-slate-800 text-white';
+            if (type === 'success') color = 'bg-emerald-600 text-white';
+            if (type === 'error') color = 'bg-red-600 text-white';
+
+            toast.className = `pointer-events-auto px-4 py-2.5 rounded-xl shadow-xl text-xs font-bold transition transform translate-y-2 opacity-0 flex items-center space-x-2 ${color}`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> <span>${msg}</span>`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    
+
+        function switchAuthTab(mode) {
+            const isLogin = mode === 'login';
+            const on = 'flex-1 py-2 text-xs font-bold rounded-lg transition bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white';
+            const off = 'flex-1 py-2 text-xs font-bold rounded-lg transition text-slate-500 dark:text-slate-400';
+            document.getElementById('authTabLogin').className = isLogin ? on : off;
+            document.getElementById('authTabSignup').className = isLogin ? off : on;
+            document.getElementById('signupNameField').classList.toggle('hidden', isLogin);
+            document.getElementById('signupRoleField').classList.toggle('hidden', isLogin);
+            document.getElementById('authSubmitBtn').innerText = isLogin ? 'Sign In to Portal' : 'Create Account';
+            state.authMode = mode;
+        }
+        state.authMode = 'login';
+
+        function showOtpStep(email, res) {
+            state.pendingEmail = email;
+            document.getElementById('authForm').classList.add('hidden');
+            document.getElementById('otpForm').classList.remove('hidden');
+            document.getElementById('otpEmailText').innerText = email;
+            const dev = document.getElementById('devOtpBox');
+            if (res.dev_otp) { document.getElementById('devOtpText').innerText = res.dev_otp; dev.classList.remove('hidden'); } else dev.classList.add('hidden');
+            document.getElementById('otpInput').value = ''; document.getElementById('otpInput').focus();
+        }
+        function cancelOtp() {
+            document.getElementById('otpForm').classList.add('hidden');
+            document.getElementById('authForm').classList.remove('hidden');
+        }
+
+        async function handleAuthSubmit(e) {
+            e.preventDefault();
+            const email = document.getElementById('authEmail').value.trim();
+            const password = document.getElementById('authPassword').value;
+            const btn = document.getElementById('authSubmitBtn'); btn.disabled = true;
+            let res;
+            if (state.authMode === 'signup') {
+                res = await api('/auth/register', 'POST', { name: document.getElementById('authName').value, email, password, role: document.getElementById('authRole').value });
+                btn.disabled = false;
+                if (!res.ok) return showToast(res.error || 'Registration failed', 'error');
+                showOtpStep(email, res);
+                return showToast(res.email_sent ? 'Verification code sent to your email.' : 'Code generated (dev mode).', 'success');
+            }
+            res = await api('/auth/login', 'POST', { email, password });
+            btn.disabled = false;
+            if (res.need_verify) { showOtpStep(email, res); return showToast('Please verify your email first.', 'info'); }
+            if (!res.ok) return showToast(res.error || 'Login failed', 'error');
+            startSession(res.user);
+        }
+
+        async function handleOtpSubmit(e) {
+            e.preventDefault();
+            const res = await api('/auth/verify-otp', 'POST', { email: state.pendingEmail, otp: document.getElementById('otpInput').value });
+            if (!res.ok) return showToast(res.error || 'Verification failed', 'error');
+            showToast('Email verified!', 'success'); cancelOtp(); startSession(res.user);
+        }
+        async function resendOtp() {
+            const res = await api('/auth/resend-otp', 'POST', { email: state.pendingEmail });
+            if (!res.ok) return showToast(res.error || 'Could not resend', 'error');
+            showOtpStep(state.pendingEmail, res); showToast('New code sent.', 'success');
+        }
+
+        async function startSession(user) {
+            state.currentUser = { ...user, roleLabel: user.role === 'doctor' ? 'Clinician' : 'Patient' };
+            document.getElementById('authView').classList.add('hidden');
+            document.getElementById('mainAppViews').classList.remove('hidden');
+            document.getElementById('mainNav').classList.remove('hidden');
+            document.getElementById('userProfileArea').classList.remove('hidden');
+            document.getElementById('navUserName').innerText = user.name;
+            document.getElementById('navRoleBadge').innerText = state.currentUser.roleLabel;
+            // Model-metrics tab is for clinicians
+            document.querySelectorAll('[data-tab="pipeline"],[data-tab="evaluation"]').forEach(b => b.classList.toggle('hidden', user.role !== 'doctor'));
+            await loadRecords();
+            navigateTo('dashboard');
+            if (user.role === 'doctor') loadModel();
+        }
+
+        async function logoutUser() {
+            await api('/auth/logout', 'POST');
+            state.currentUser = null; state.logs = [];
+            document.getElementById('mainAppViews').classList.add('hidden');
+            document.getElementById('mainNav').classList.add('hidden');
+            document.getElementById('userProfileArea').classList.add('hidden');
+            document.getElementById('authView').classList.remove('hidden');
+            showToast('Signed out successfully.', 'info');
+        }
+
+        async function checkSession() {
+            const res = await api('/auth/me');
+            if (res.ok) startSession(res.user);
+        }
+
+        async function loadRecords() {
+            const res = await api('/records');
+            state.logs = res.ok ? res.records : [];
+            renderTableLogs();
+        }
+
+        async function loadModel() {
+            const res = await api('/model/metrics');
+            if (!res.ok) return;
+            state.model = res;
+            const pct = v => (v * 100).toFixed(1) + '%';
+            const L = res.labels;
+            document.getElementById('pipeImpute').innerHTML = Object.entries(res.missing_before).filter(([, n]) => n > 0)
+                .map(([k, n]) => `${L[k]}: ${n} missing &rarr; median ${res.medians[k].toFixed(1)}`).join('<br>') || 'No missing values in training data';
+            document.getElementById('pipeScale').innerHTML = `StandardScaler fitted on ${Math.round(res.n_samples * 0.8)} training rows<br>mean = 0.00, std = 1.00`;
+            document.getElementById('pipeRFE').innerHTML = `Kept ${res.selected.length} of ${Object.keys(res.rfe_ranking).length}:<br>${res.selected.map(f => L[f]).join(', ')}`;
+            document.getElementById('evalIntro').innerText = `Evaluated on a held-out test set (N = ${res.n_test}) from ${res.n_samples} records. Adjust the decision threshold to inspect the precision vs. recall trade-off.`;
+            document.getElementById('modelCompareBody').innerHTML = [['Random Forest (primary)', res.random_forest], ['Logistic Regression (baseline)', res.logistic_regression]]
+                .map(([n, m]) => `<tr><td class="py-2 pr-4 font-bold">${n}</td><td class="pr-4">${pct(m.accuracy)}</td><td class="pr-4">${pct(m.precision)}</td><td class="pr-4">${pct(m.recall)}</td><td class="pr-4">${pct(m.f1)}</td><td>${m.roc_auc.toFixed(3)}</td></tr>`).join('');
+            updateMetricsForThreshold(document.getElementById('thresholdSlider').value);
+            if (state.activeTab === 'pipeline') renderFeatureChart();
+        }
+
+        const numOrNull = id => { const v = document.getElementById(id).value; return v === '' ? null : parseFloat(v); };
+
+        async function handlePredictionSubmit(e) {
+            e.preventDefault();
+            const inputs = {
+                age: numOrNull('inputAge'), bmi: numOrNull('inputBMI'), glucose: numOrNull('inputGlucose'), bp: numOrNull('inputBP'),
+                activity: parseInt(document.getElementById('inputActivity').value), family_history: parseInt(document.getElementById('inputFamilyHistory').value),
+                food_intake: numOrNull('inputFood'), stress: numOrNull('inputStress')
+            };
+            const res = await api('/predict', 'POST', inputs);
+            if (!res.ok) return showToast(res.error || 'Prediction failed', 'error');
+            state.lastInputs = inputs; state.lastPrediction = res;
+
+            const styles = {
+                'High Risk': ['bg-red-50 dark:bg-red-950/50 border-red-300 text-red-700 dark:text-red-300', 'bg-red-500'],
+                'Moderate Risk': ['bg-amber-50 dark:bg-amber-950/50 border-amber-300 text-amber-700 dark:text-amber-300', 'bg-amber-500'],
+                'Low Risk': ['bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 text-emerald-700 dark:text-emerald-300', 'bg-emerald-500']
+            }[res.risk];
+            document.getElementById('resultPlaceholder').classList.add('hidden');
+            document.getElementById('resultContent').classList.remove('hidden');
+            document.getElementById('saveResultBox').classList.remove('hidden');
+            document.getElementById('riskBadgeBox').className = `p-4 rounded-2xl border text-center transition-all ${styles[0]}`;
+            document.getElementById('riskTitle').innerText = res.risk;
+            document.getElementById('riskProbabilityText').innerText = `Random Forest probability: ${res.prob}%  |  Logistic baseline: ${res.prob_baseline}%`;
+            const meter = document.getElementById('probabilityMeter');
+            meter.className = `h-full transition-all duration-700 ${styles[1]}`; meter.style.width = `${res.prob}%`;
+            const items = res.drivers.length ? res.drivers.map(d => `${d.feature}${d.value != null ? ' (' + d.value + ')' : ' (imputed)'} raises risk`) : ['No single factor stands out above the training average.'];
+            document.getElementById('contributingList').innerHTML = items.map(d => `<li class="flex items-center"><i class="fa-solid fa-angle-right text-brand-500 mr-1 text-[10px]"></i> ${esc(d)}</li>`).join('');
+            showToast('Prediction computed.', 'success');
+        }
+
+        async function saveCurrentToLog() {
+            if (!state.lastInputs) return;
+            const res = await api('/records', 'POST', state.lastInputs);
+            if (!res.ok) return showToast(res.error || 'Save failed', 'error');
+            await loadRecords();
+            showToast('Assessment saved to database.', 'success');
+            navigateTo('dashboard');
+        }
+
+        function renderTableLogs() {
+            const tbody = document.getElementById('historyTableBody'); tbody.innerHTML = '';
+            if (!state.logs.length) tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-400 text-sm">No assessments yet. Create one from Patient Entry.</td></tr>';
+            state.logs.forEach(log => {
+                let badge = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300';
+                if (log.risk === 'High Risk') badge = 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
+                if (log.risk === 'Moderate Risk') badge = 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition';
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-mono text-xs"><span class="font-bold block">${esc(log.id)}</span><span class="text-[10px] text-slate-400">${esc(log.date)}</span></td>
+                    <td class="py-3 px-4 font-medium">${esc(log.name)}</td>
+                    <td class="py-3 px-4">${esc(log.age)} yrs / ${log.bmi ?? '-'}</td>
+                    <td class="py-3 px-4 font-semibold">${esc(log.glucose)}</td>
+                    <td class="py-3 px-4">${log.bp ?? '-'} mmHg</td>
+                    <td class="py-3 px-4"><span class="px-2.5 py-1 rounded-full text-xs font-extrabold ${badge}">${esc(log.risk)} (${log.prob}%)</span></td>
+                    <td class="py-3 px-4 text-right"><button onclick="deleteLog(${log.rid})" class="text-slate-400 hover:text-red-500 p-1"><i class="fa-solid fa-trash-can"></i></button></td>`;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('kpiTotalRecords').innerText = state.logs.length;
+            document.getElementById('kpiHighRisk').innerText = state.logs.filter(l => l.risk === 'High Risk').length;
+            const g = state.logs.filter(l => l.glucose != null);
+            document.getElementById('kpiAvgGlucose').innerText = g.length ? `${Math.round(g.reduce((a, c) => a + c.glucose, 0) / g.length)} mg/dL` : '-';
+            if (state.activeTab === 'dashboard') renderDashboardCharts();
+        }
+
+        async function deleteLog(rid) {
+            const res = await api('/records/' + rid, 'DELETE');
+            if (!res.ok) return showToast(res.error || 'Delete failed', 'error');
+            await loadRecords(); showToast('Record deleted.', 'info');
+        }
+
+        function renderFeatureChart() {
+            const ctx = document.getElementById('featureImportanceChart')?.getContext('2d');
+            if (!ctx || !state.model) return;
+            if (state.charts.bar) state.charts.bar.destroy();
+            const entries = Object.entries(state.model.importance).sort((a, b) => b[1] - a[1]);
+            state.charts.bar = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: entries.map(([k]) => state.model.labels[k]), datasets: [{ label: 'Importance', data: entries.map(([, v]) => v), backgroundColor: '#14b8a6', borderRadius: 8 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+        }
+
+        function updateMetricsForThreshold(val) {
+            const t = parseFloat(val);
+            document.getElementById('thresholdValText').innerText = t.toFixed(2);
+            if (!state.model) return;
+            let tp = 0, fp = 0, fn = 0, tn = 0;
+            state.model.test_labels.forEach((y, i) => {
+                const p = state.model.test_proba_rf[i] >= t ? 1 : 0;
+                if (y && p) tp++; else if (!y && p) fp++; else if (y && !p) fn++; else tn++;
+            });
+            const n = tp + fp + fn + tn;
+            const prec = tp / ((tp + fp) || 1), rec = tp / ((tp + fn) || 1);
+            document.getElementById('cmTP').innerText = tp; document.getElementById('cmFP').innerText = fp;
+            document.getElementById('cmFN').innerText = fn; document.getElementById('cmTN').innerText = tn;
+            document.getElementById('cmTotal').innerText = n;
+            document.getElementById('evalAccuracy').innerText = ((tp + tn) / n * 100).toFixed(1) + '%';
+            document.getElementById('evalPrecision').innerText = (prec * 100).toFixed(1) + '%';
+            document.getElementById('evalRecall').innerText = (rec * 100).toFixed(1) + '%';
+            document.getElementById('evalF1').innerText = ((2 * prec * rec / ((prec + rec) || 1)) * 100).toFixed(1) + '%';
+        }
+
+        function exportReport() {
+            const rows = state.logs.map(l => [l.id, l.date, l.name, l.age, l.bmi, l.glucose, l.bp, l.risk, l.prob].join(','));
+            const csv = 'id,date,name,age,bmi,glucose,bp,risk,probability\n' + rows.join('\n');
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+            a.download = `VitalPredict_Records_${Date.now()}.csv`; a.click();
+            showToast('Records exported as CSV.', 'success');
+        }
+    </script>
+</body>
+</html>
